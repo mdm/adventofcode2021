@@ -82,7 +82,7 @@ fn main() {
         if candidates_co2_scrubber_rating.len() > 1 {
             let zeros_for_co2_scrubber_rating = count(&candidates_co2_scrubber_rating, 0);
             let ones_for_co2_scrubber_rating = count(&candidates_co2_scrubber_rating, 1);
-            let most_common_for_co2_scrubber_rating =
+            let least_common_for_co2_scrubber_rating =
                 if zeros_for_co2_scrubber_rating[i] > ones_for_co2_scrubber_rating[i] {
                     1
                 } else {
@@ -91,7 +91,7 @@ fn main() {
 
             candidates_co2_scrubber_rating = candidates_co2_scrubber_rating
                 .into_iter()
-                .filter(|number| number[i] == most_common_for_co2_scrubber_rating)
+                .filter(|number| number[i] == least_common_for_co2_scrubber_rating)
                 .collect();
         }
     }
