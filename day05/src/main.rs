@@ -29,6 +29,28 @@ impl Line {
     }
 }
 
+fn mark_line(line: &Line, grid: &mut HashMap<(i32, i32), i32>) {
+    let step_x = if line.start_x > line.end_x { -1 } else { 1 };
+    let step_y = if line.start_y > line.end_y { -1 } else { 1 };
+
+    let length_x = (line.end_x - line.start_x).abs();
+    let length_y = (line.end_y - line.start_y).abs();
+
+    for y in 0..=length_y {
+        for x in 0..=length_x {
+            let on_vertical = line.start_x == line.end_x;
+            let on_horizontal = line.start_y == line.end_y;
+            let on_diagonal = x == y;
+
+            if on_vertical || on_horizontal || on_diagonal {
+                let x = line.start_x + x * step_x;
+                let y = line.start_y + y * step_y;
+                *grid.entry((x, y)).or_insert(0) += 1;
+            }
+        }
+    }
+}
+
 fn main() {
     let filename = std::env::args().nth(1).unwrap();
     let file = std::fs::File::open(filename).unwrap();
@@ -44,16 +66,7 @@ fn main() {
         .iter()
         .filter(|line| line.start_x == line.end_x || line.start_y == line.end_y)
     {
-        let min_x = line.start_x.min(line.end_x);
-        let max_x = line.start_x.max(line.end_x);
-        let min_y = line.start_y.min(line.end_y);
-        let max_y = line.start_y.max(line.end_y);
-
-        for y in min_y..=max_y {
-            for x in min_x..=max_x {
-                *grid1.entry((x, y)).or_insert(0) += 1;
-            }
-        }
+        mark_line(line, &mut grid1);
     }
 
     let part1 = grid1.values().filter(|point| **point >= 2).count();
@@ -61,27 +74,9 @@ fn main() {
 
     let mut grid2 = HashMap::new();
     for line in lines.iter() {
-        let step_x = if line.start_x > line.end_x { -1 } else { 1 };
-        let step_y = if line.start_y > line.end_y { -1 } else { 1 };
-
-        let length_x = (line.end_x - line.start_x).abs();
-        let length_y = (line.end_y - line.start_y).abs();
-
-        for y in 0..=length_y {
-            for x in 0..=length_x {
-                let on_vertical = line.start_x == line.end_x;
-                let on_horizontal = line.start_y == line.end_y;
-                let on_diagonal = x == y;
-
-                if on_vertical || on_horizontal || on_diagonal {
-                    let x = line.start_x + x * step_x;
-                    let y = line.start_y + y * step_y;
-                    *grid2.entry((x, y)).or_insert(0) += 1;
-                }
-            }
-        }
+        mark_line(line, &mut grid2);
     }
 
-    let part1 = grid2.values().filter(|point| **point >= 2).count();
-    println!("{}", part1);
+    let part2 = grid2.values().filter(|point| **point >= 2).count();
+    println!("{}", part2);
 }
