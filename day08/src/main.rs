@@ -1,4 +1,17 @@
+use itertools::Itertools;
 use std::{collections::HashMap, io::BufRead};
+
+fn map_string(s: &str, permutation: &Vec<char>) -> String {
+    let mut mapped = s
+        .chars()
+        .map(|char| {
+            let index = "abcdefg".chars().position(|c| c == char).unwrap();
+            permutation[index]
+        })
+        .collect::<Vec<_>>();
+    mapped.sort();
+    mapped.iter().collect::<String>()
+}
 
 fn main() {
     let filename = std::env::args().nth(1).unwrap();
@@ -34,125 +47,52 @@ fn main() {
         })
         .collect::<Vec<_>>();
 
+    let mut digits = HashMap::new();
+    digits.insert("abcefg".to_string(), 0);
+    digits.insert("cf".to_string(), 1);
+    digits.insert("acdeg".to_string(), 2);
+    digits.insert("acdfg".to_string(), 3);
+    digits.insert("bcdf".to_string(), 4);
+    digits.insert("abdfg".to_string(), 5);
+    digits.insert("abdefg".to_string(), 6);
+    digits.insert("acf".to_string(), 7);
+    digits.insert("abcdefg".to_string(), 8);
+    digits.insert("abcdfg".to_string(), 9);
+
     let mut part1 = 0;
     let mut part2 = 0;
     for display in displays {
-        let mut signal_to_digit = HashMap::new();
-        let mut digit_to_signal = HashMap::new();
+        for permutation in "abcdefg".chars().permutations(7) {
+            let valid = display
+                .0
+                .iter()
+                .map(|signal| map_string(signal, &permutation))
+                .all(|signal| digits.contains_key(&signal));
 
-        for signal in &display.0 {
-            match signal.len() {
-                2 => {
-                    signal_to_digit.insert(signal, 1);
-                    digit_to_signal.insert(1, signal);
+            if valid {
+                let output_digits = display
+                    .1
+                    .iter()
+                    .map(|output| {
+                        let mapped = map_string(output, &permutation);
+                        digits[&mapped]
+                    })
+                    .collect::<Vec<_>>();
+
+                let mut output_value = 0;
+                for digit in &output_digits {
+                    if *digit == 1 || *digit == 4 || *digit == 7 || *digit == 8 {
+                        part1 += 1;
+                    }
+                    output_value *= 10;
+                    output_value += digit;
                 }
-                4 => {
-                    signal_to_digit.insert(signal, 4);
-                    digit_to_signal.insert(4, signal);
-                }
-                3 => {
-                    signal_to_digit.insert(signal, 7);
-                    digit_to_signal.insert(7, signal);
-                }
-                7 => {
-                    signal_to_digit.insert(signal, 8);
-                    digit_to_signal.insert(8, signal);
-                }
-                _ => {}
+
+                part2 += output_value;
+
+                break;
             }
         }
-
-        for output in &display.1 {
-            if signal_to_digit.contains_key(output) {
-                part1 += 1;
-            }
-        }
-
-        for signal in &display.0 {
-            if signal.len() != 5 {
-                continue;
-            }
-
-            let is_three = digit_to_signal[&1]
-                .chars()
-                .all(|char| signal.contains(char));
-            if is_three {
-                signal_to_digit.insert(signal, 3);
-                digit_to_signal.insert(3, signal);
-            }
-        }
-
-        for signal in &display.0 {
-            if signal.len() != 6 {
-                continue;
-            }
-
-            let is_nine = digit_to_signal[&3]
-                .chars()
-                .all(|char| signal.contains(char));
-            if is_nine {
-                signal_to_digit.insert(signal, 9);
-                digit_to_signal.insert(9, signal);
-            }
-        }
-
-        for signal in &display.0 {
-            if signal.len() != 6 {
-                continue;
-            }
-
-            let maybe_zero = digit_to_signal[&1]
-                .chars()
-                .all(|char| signal.contains(char));
-            if maybe_zero && !signal_to_digit.contains_key(signal) {
-                signal_to_digit.insert(signal, 0);
-                digit_to_signal.insert(0, signal);
-            }
-        }
-
-        for signal in &display.0 {
-            if signal.len() != 6 {
-                continue;
-            }
-
-            if !signal_to_digit.contains_key(signal) {
-                signal_to_digit.insert(signal, 6);
-                digit_to_signal.insert(6, signal);
-            }
-        }
-
-        for signal in &display.0 {
-            if signal.len() != 5 {
-                continue;
-            }
-
-            let is_five = signal
-                .chars()
-                .all(|char| digit_to_signal[&6].contains(char));
-            if is_five {
-                signal_to_digit.insert(signal, 5);
-                digit_to_signal.insert(5, signal);
-            }
-        }
-
-        for signal in &display.0 {
-            if signal.len() != 5 {
-                continue;
-            }
-
-            if !signal_to_digit.contains_key(signal) {
-                signal_to_digit.insert(signal, 2);
-                digit_to_signal.insert(2, signal);
-            }
-        }
-
-        let mut value = 0;
-        for output in display.1 {
-            value *= 10;
-            value += signal_to_digit[&output];
-        }
-
-        part2 += value;
     }
 
     println!("{}", part1);
