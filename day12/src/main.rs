@@ -45,6 +45,6 @@ fn main() {
     let part1 = count_paths(&map, "start", HashSet::new(), false);
     println!("{}", part1);
 
-    let part1 = count_paths(&map, "start", HashSet::new(), true);
-    println!("{}", part1);
+    let part2 = count_paths(&map, "start", HashSet::new(), true);
+    println!("{}", part2);
 }
