@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::io::BufRead;
-use std::vec;
 
 fn get_counts_recursive(
     start: &str,
