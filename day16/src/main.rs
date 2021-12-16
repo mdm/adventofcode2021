@@ -43,10 +43,7 @@ fn decode_packet(packet: &[usize]) -> (Packet, usize) {
             let mut value = 0;
             loop {
                 value *= 16;
-                value += 8 * packet[start + 1]
-                    + 4 * packet[start + 2]
-                    + 2 * packet[start + 3]
-                    + packet[start + 4];
+                value += decode_binary(&packet[(start + 1)..(start + 5)]);
 
                 if packet[start] == 0 {
                     break;
