@@ -69,7 +69,7 @@ fn main() {
 
         input_image = output_image;
         output_image = HashMap::new();
-        default_pixel = if i % 2 == 0 {
+        default_pixel = if default_pixel == '.' {
             enhancement_algorithm.chars().next().unwrap()
         } else {
             enhancement_algorithm.chars().last().unwrap()
