@@ -28,7 +28,7 @@ fn main() {
     ];
 
     let mut output_image = HashMap::new();
-    let mut default_char = '.';
+    let mut default_pixel = '.';
     for i in 0..50 {
         let min_x = input_image.keys().map(|pixel| pixel.0).min().unwrap() - 1;
         let max_x = input_image.keys().map(|pixel| pixel.0).max().unwrap() + 1;
@@ -45,7 +45,7 @@ fn main() {
                         if input_image.contains_key(&pixel) {
                             input_image[&pixel]
                         } else {
-                            default_char
+                            default_pixel
                         }
                     })
                     .fold(0usize, |accu, pixel| {
@@ -63,16 +63,13 @@ fn main() {
                     .nth(binary_representation)
                     .unwrap();
 
-                // print!("{}", enhanced_pixel);
                 output_image.insert((x, y), enhanced_pixel);
             }
-            // println!();
         }
-        // println!();
 
         input_image = output_image;
         output_image = HashMap::new();
-        default_char = if default_char == '.' {
+        default_pixel = if i % 2 == 0 {
             enhancement_algorithm.chars().next().unwrap()
         } else {
             enhancement_algorithm.chars().last().unwrap()
