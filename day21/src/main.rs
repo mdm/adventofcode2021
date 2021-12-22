@@ -1,8 +1,20 @@
-use std::{io::BufRead, collections::HashMap};
+use std::{collections::HashMap, io::BufRead};
 
-
-fn dirac_wins_recursive(player: usize, rolls_remaining: usize, positions: Vec<i64>, scores: Vec<i64>, memo: &mut HashMap<(usize, usize, i64, i64, i64, i64), (i64, i64)>) -> (i64, i64) {
-    let state = (player, rolls_remaining, positions[0], positions[1], scores[0], scores[1]);
+fn dirac_wins_recursive(
+    player: usize,
+    rolls_remaining: usize,
+    positions: Vec<i64>,
+    scores: Vec<i64>,
+    memo: &mut HashMap<(usize, usize, i64, i64, i64, i64), (i64, i64)>,
+) -> (i64, i64) {
+    let state = (
+        player,
+        rolls_remaining,
+        positions[0],
+        positions[1],
+        scores[0],
+        scores[1],
+    );
     if memo.contains_key(&state) {
         return memo[&state];
     }
@@ -27,7 +39,10 @@ fn dirac_wins_recursive(player: usize, rolls_remaining: usize, positions: Vec<i6
             }
         };
 
-        total_wins = (total_wins.0 + wins_from_here.0, total_wins.1 + wins_from_here.1);
+        total_wins = (
+            total_wins.0 + wins_from_here.0,
+            total_wins.1 + wins_from_here.1,
+        );
     }
 
     memo.insert(state, total_wins);
@@ -39,9 +54,18 @@ fn main() {
     let file = std::fs::File::open(filename).unwrap();
     let reader = std::io::BufReader::new(file);
 
-    let starting_positions = reader.lines().map(|line| {
-        line.unwrap().split(' ').last().unwrap().parse::<i64>().unwrap() - 1
-    }).collect::<Vec<_>>();
+    let starting_positions = reader
+        .lines()
+        .map(|line| {
+            line.unwrap()
+                .split(' ')
+                .last()
+                .unwrap()
+                .parse::<i64>()
+                .unwrap()
+                - 1
+        })
+        .collect::<Vec<_>>();
 
     let mut positions = starting_positions.clone();
     let mut scores = vec![0, 0];
