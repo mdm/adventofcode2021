@@ -25,6 +25,13 @@ fn main() {
 
     let mut on_cubes = HashSet::new();
     for (on, (min_x, max_x), (min_y, max_y), (min_z, max_z)) in reboot_steps {
+        let min_x = min_x.max(-50);
+        let max_x = max_x.min(50);
+        let min_y = min_y.max(-50);
+        let max_y = max_y.min(50);
+        let min_z = min_z.max(-50);
+        let max_z = max_z.min(50);
+
         for z in min_z..=max_z {
             for y in min_y..=max_y {
                 for x in min_x..=max_x {
