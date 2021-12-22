@@ -5,13 +5,22 @@ use std::{
 
 #[derive(Debug, Clone)]
 struct Cuboid {
-    id: usize,
     min_x: i64,
     max_x: i64,
     min_y: i64,
     max_y: i64,
     min_z: i64,
     max_z: i64,
+}
+
+impl Cuboid {
+    fn volume(&self) -> i64 {
+        let width = self.max_x - self.min_x + 1;
+        let height = self.max_y - self.min_y + 1;
+        let depth = self.max_z - self.min_z + 1;
+
+        width * height * depth
+    }
 }
 
 fn split(keep: &Cuboid, discard: &Cuboid) -> Vec<Cuboid> {
@@ -27,51 +36,92 @@ fn split(keep: &Cuboid, discard: &Cuboid) -> Vec<Cuboid> {
     let inner_min_z = keep.min_z.max(discard.min_z);
     let inner_max_z = keep.max_z.min(discard.max_z);
 
-    if keep.min_x < inner_min_x && keep.min_y < inner_min_y && keep.min_z < inner_min_z {
-        let cuboid = Cuboid {
-            id: 1,
-            min_x: keep.min_x,
-            max_x: inner_min_x - 1,
-            min_y: keep.min_y,
-            max_y: inner_min_y - 1,
-            min_z: keep.min_z,
-            max_z: inner_min_z - 1,
-        };
+    let outer_min_x = keep.min_x.min(discard.min_x);
+    let outer_max_x = keep.max_x.max(discard.max_x);
+    let outer_min_y = keep.min_y.min(discard.min_y);
+    let outer_max_y = keep.max_y.max(discard.max_y);
+    let outer_min_z = keep.min_z.min(discard.min_z);
+    let outer_max_z = keep.max_z.max(discard.max_z);
 
-        cuboids.push(cuboid);
+    for z in 0..3 {
+        for y in 0..3 {
+            for x in 0..3 {
+                let min_x = match x {
+                    0 => outer_min_x,
+                    1 => inner_min_x,
+                    2 => inner_max_x + 1,
+                    _ => unreachable!(),
+                };
+
+                let max_x = match x {
+                    0 => inner_min_x - 1,
+                    1 => inner_max_x,
+                    2 => outer_max_x,
+                    _ => unreachable!(),
+                };
+
+                let min_y = match y {
+                    0 => outer_min_y,
+                    1 => inner_min_y,
+                    2 => inner_max_y + 1,
+                    _ => unreachable!(),
+                };
+
+                let max_y = match y {
+                    0 => inner_min_y - 1,
+                    1 => inner_max_y,
+                    2 => outer_max_y,
+                    _ => unreachable!(),
+                };
+
+                let min_z = match z {
+                    0 => outer_min_z,
+                    1 => inner_min_z,
+                    2 => inner_max_z + 1,
+                    _ => unreachable!(),
+                };
+
+                let max_z = match z {
+                    0 => inner_min_z - 1,
+                    1 => inner_max_z,
+                    2 => outer_max_z,
+                    _ => unreachable!(),
+                };
+
+                let cuboid = Cuboid {
+                    min_x,
+                    max_x,
+                    min_y,
+                    max_y,
+                    min_z,
+                    max_z,
+                };
+
+                cuboids.push(cuboid);
+            }
+        }
     }
 
+    // dbg!(cuboids.len());
 
-    if keep.min_y < inner_min_y && keep.min_z < inner_min_z {
-        let cuboid = Cuboid {
-            id: 2,
-            min_x: inner_min_x,
-            max_x: inner_max_x,
-            min_y: keep.min_y,
-            max_y: inner_min_y - 1,
-            min_z: keep.min_z,
-            max_z: inner_min_z - 1,
-        };
+    cuboids
+        .into_iter()
+        .filter(|cuboid| {
+            if cuboid.min_x > cuboid.max_x
+                || cuboid.min_y > cuboid.max_y
+                || cuboid.min_z > cuboid.max_z
+            {
+                // dbg!(cuboid);
+                return false;
+            }
 
-        cuboids.push(cuboid);
-    }
+            let intersect_x = cuboid.max_x >= discard.min_x && discard.max_x >= cuboid.min_x;
+            let intersect_y = cuboid.max_y >= discard.min_y && discard.max_y >= cuboid.min_y;
+            let intersect_z = cuboid.max_z >= discard.min_z && discard.max_z >= cuboid.min_z;
 
-
-    if keep.max_x > inner_max_x && keep.min_y < inner_min_y && keep.min_z < inner_min_z {
-        let cuboid = Cuboid {
-            id: 3,
-            min_x: inner_max_x + 1,
-            max_x: keep.max_x,
-            min_y: keep.min_y,
-            max_y: inner_min_y - 1,
-            min_z: keep.min_z,
-            max_z: inner_min_z - 1,
-        };
-
-        cuboids.push(cuboid);
-    }
-
-    unimplemented!()
+            !(intersect_x && intersect_y && intersect_z)
+        })
+        .collect()
 }
 
 fn main() {
@@ -100,7 +150,6 @@ fn main() {
             (
                 on,
                 Cuboid {
-                    id: 0,
                     min_x,
                     max_x,
                     min_y,
@@ -144,6 +193,7 @@ fn main() {
 
     let mut current_on_cuboids: Vec<Cuboid> = Vec::new();
     let mut next_on_cuboids: Vec<Cuboid> = Vec::new();
+    let mut part2 = 0i64;
     for (on, new) in reboot_steps {
         let mut intersections = 0;
 
@@ -155,29 +205,51 @@ fn main() {
             if intersect_x && intersect_y && intersect_z {
                 intersections += 1;
 
-                let old_contains_new_x = new.min_x >= old.min_x && new.max_x <= old.max_x;
-                let old_contains_new_y = new.min_y >= old.min_y && new.max_y <= old.max_y;
-                let old_contains_new_z = new.min_z >= old.min_z && new.max_z <= old.max_z;
-                let old_contains_new = old_contains_new_x && old_contains_new_y && old_contains_new_z;
+                // let old_contains_new_x = new.min_x >= old.min_x && new.max_x <= old.max_x;
+                // let old_contains_new_y = new.min_y >= old.min_y && new.max_y <= old.max_y;
+                // let old_contains_new_z = new.min_z >= old.min_z && new.max_z <= old.max_z;
+                // let old_contains_new = old_contains_new_x && old_contains_new_y && old_contains_new_z;
 
-                let new_contains_old_x = old.min_x >= new.min_x && old.max_x <= new.max_x;
-                let new_contains_old_y = old.min_y >= new.min_y && old.max_y <= new.max_y;
-                let new_contains_old_z = old.min_z >= new.min_z && old.max_z <= new.max_z;
-                let new_contains_old = new_contains_old_x && new_contains_old_y && new_contains_old_z;
+                // let new_contains_old_x = old.min_x >= new.min_x && old.max_x <= new.max_x;
+                // let new_contains_old_y = old.min_y >= new.min_y && old.max_y <= new.max_y;
+                // let new_contains_old_z = old.min_z >= new.min_z && old.max_z <= new.max_z;
+                // let new_contains_old = new_contains_old_x && new_contains_old_y && new_contains_old_z;
 
-                dbg!(old_contains_new, new_contains_old);
-                println!();
+                // dbg!(old_contains_new, new_contains_old);
+                // println!();
+
+                // let intersection = Cuboid {
+                //     min_x: old.min_x.max(new.min_x),
+                //     max_x: old.max_x.min(new.max_x),
+                //     min_y: old.min_y.max(new.min_y),
+                //     max_y: old.max_y.min(new.max_y),
+                //     min_z: old.min_z.max(new.min_z),
+                //     max_z: old.max_z.min(new.max_z),
+                // };
+
+                // part2 -= intersection.volume();
+
+                dbg!(on);
 
                 if on {
-                    next_on_cuboids.extend(split(&new, &old));
+                    // part2 += new.volume();
+                    // dbg!(&new, &old);
+                    let new_on = split(&new, &old);
+                    // dbg!(&new_on);
+                    next_on_cuboids.extend(new_on);
                     next_on_cuboids.push(old);
                 } else {
-                    next_on_cuboids.extend(split(&old, &new));
+                    // dbg!(&old, &new);
+                    let new_off = split(&old, &new);
+                    // dbg!(&new_off);
+                    next_on_cuboids.extend(new_off);
                 }
-            }            
+            } else {
+                next_on_cuboids.push(old);
+            }
         }
 
-        if intersections == 0 {
+        if on && intersections == 0 {
             next_on_cuboids.push(new);
         }
 
@@ -185,12 +257,11 @@ fn main() {
         next_on_cuboids = Vec::new();
     }
 
-    let part2 = current_on_cuboids.iter().map(|cuboid| {
-        let width = cuboid.max_x - cuboid.min_x + 1;
-        let height = cuboid.max_y - cuboid.min_y + 1;
-        let depth = cuboid.max_z - cuboid.min_z + 1;
+    dbg!(current_on_cuboids.len());
 
-        width * height * depth
-    }).sum::<i64>();
-    println!("{}", part1);
+    let part2 = current_on_cuboids
+        .iter()
+        .map(|cuboid| cuboid.volume())
+        .sum::<i64>();
+    println!("{}", part2);
 }
