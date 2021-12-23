@@ -1,4 +1,4 @@
-use std::io::BufRead;
+use std::{io::BufRead, collections::HashMap};
 
 use priority_queue::PriorityQueue;
 
@@ -9,25 +9,44 @@ fn best_path_cost(risk_levels: &Vec<Vec<i32>>) -> i32 {
     let mut queue = PriorityQueue::new();
     queue.push((0, 0), -0);
 
+    let mut visited = HashMap::new();
+    visited.insert((0, 0), -0);
+
     while let Some((current, risk_so_far)) = queue.pop() {
         if current.0 == max_x && current.1 == max_y {
             return -risk_so_far;
         }
 
         if current.1 > 0 {
-            queue.push_increase((current.0, current.1 - 1), risk_so_far - risk_levels[current.1 - 1][current.0]);
+            let next = (current.0, current.1 - 1);
+            if !visited.contains_key(&next) || visited[&next] < risk_so_far - risk_levels[next.1][next.0] {
+                visited.insert(next, risk_so_far - risk_levels[next.1][next.0]);
+                queue.push_increase(next, risk_so_far - risk_levels[next.1][next.0]);
+            }
         }
 
         if current.0 < max_x {
-            queue.push_increase((current.0 + 1, current.1), risk_so_far - risk_levels[current.1][current.0 + 1]);
+            let next = (current.0 + 1, current.1);
+            if !visited.contains_key(&next) || visited[&next] < risk_so_far - risk_levels[next.1][next.0] {
+                visited.insert(next, risk_so_far - risk_levels[next.1][next.0]);
+                queue.push_increase(next, risk_so_far - risk_levels[next.1][next.0]);
+            }
         }
 
         if current.1 < max_y {
-            queue.push_increase((current.0, current.1 + 1), risk_so_far - risk_levels[current.1 + 1][current.0]);
+            let next = (current.0, current.1 + 1);
+            if !visited.contains_key(&next) || visited[&next] < risk_so_far - risk_levels[next.1][next.0] {
+                visited.insert(next, risk_so_far - risk_levels[next.1][next.0]);
+                queue.push_increase(next, risk_so_far - risk_levels[next.1][next.0]);
+            }
         }
 
         if current.0 > 0 {
-            queue.push_increase((current.0 - 1, current.1), risk_so_far - risk_levels[current.1][current.0 - 1]);
+            let next = (current.0 - 1, current.1);
+            if !visited.contains_key(&next) || visited[&next] < risk_so_far - risk_levels[next.1][next.0] {
+                visited.insert(next, risk_so_far - risk_levels[next.1][next.0]);
+                queue.push_increase(next, risk_so_far - risk_levels[next.1][next.0]);
+            }
         }
     }
 
