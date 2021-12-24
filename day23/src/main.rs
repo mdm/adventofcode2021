@@ -132,34 +132,24 @@ fn find_lowest_energy(map: &Vec<Vec<char>>, state: &Vec<(usize, usize)>, per_roo
     let mut energy_used = HashMap::new();
     energy_used.insert(state.clone(), -0);
 
-    let mut energy_estimated = HashMap::new();
-    dbg!(estimate_energy(&state, per_room));
-    energy_estimated.insert(state.clone(), -estimate_energy(&state, per_room));
-
-    let mut iterations = 0;
+    let mut iterations = 0usize;
     while let Some((current, energy_so_far)) = queue.pop() {
         if solved(&current, per_room) {
             dbg!(iterations);
             print_map(map, &current, per_room);
+            dbg!(energy_used[&current]);
             return -energy_so_far;
         }
 
-        // println!("CURRENT");
-        // print_map(map, &current);
-
         for (amphipod_id, position) in current.iter().enumerate() {
-            // dbg!(amphipod_id, next_positions(map, &current, amphipod_id));
             for next_position in next_positions(map, &current, amphipod_id, per_room) {
                 if !(position.1 >= 2) && !(next_position.1 >= 2) {
                     continue; // stay put of in hallway and next_position is also in hallway
                 }
 
-                // dbg!("@1", next_position);
-
                 if position.0 != next_position.0 && next_position.1 >= 2 {
                     let target_x = amphipod_id / per_room * 2 + 3;
                     if next_position.0 != target_x {
-                        // println!("SKIP 1");
                         continue; // not target room
                     }
 
@@ -174,32 +164,16 @@ fn find_lowest_energy(map: &Vec<Vec<char>>, state: &Vec<(usize, usize)>, per_roo
                     }
                 }
 
-                // dbg!("@2", next_position);
-
-                let next_energy = energy_so_far
+                let next_energy = energy_used[&current]
                     - 10i32.pow(amphipod_id as u32 / per_room as u32) * distance(*position, next_position);
                 let mut next_state = current.clone();
                 next_state[amphipod_id] = next_position;
-
-                // if iterations == 6 && amphipod_id / 2 == 2 {
-                //     dbg!(iterations);
-                //     print_map(map, &current);
-                // dbg!(amphipod_id);
-                // print_map(map, &next_state);
-                // dbg!(&next_state);
-                // dbg!(
-                //     !energy_used.contains_key(&next_state),
-                //     !energy_used.contains_key(&next_state)
-                //         || energy_used[&next_state] <= next_energy
-                // );
-                // }
 
                 if !energy_used.contains_key(&next_state) || energy_used[&next_state] <= next_energy
                 {
                     energy_used.insert(next_state.clone(), next_energy);
                     let next_energy_estimated =
                         next_energy - estimate_energy(&next_state, per_room);
-                    energy_estimated.insert(state.clone(), next_energy_estimated);
                     queue.push_increase(next_state, next_energy_estimated);
                 }
             }
@@ -224,7 +198,7 @@ fn main() {
     let file = std::fs::File::open(filename).unwrap();
     let reader = std::io::BufReader::new(file);
 
-    let mut original_map = reader.lines().map(|line| line.unwrap()).collect::<Vec<_>>();
+    let original_map = reader.lines().map(|line| line.unwrap()).collect::<Vec<_>>();
 
     let mut positions = Vec::new();
     let map1 = original_map
@@ -251,8 +225,6 @@ fn main() {
         .collect::<Vec<_>>();
 
     print_map(&map1, &state, 2);
-
-    // dbg!(&state);
 
     let part1 = find_lowest_energy(&map1, &state, 2);
     println!("{}", part1);
