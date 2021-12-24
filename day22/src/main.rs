@@ -229,7 +229,7 @@ fn main() {
 
                 // part2 -= intersection.volume();
 
-                dbg!(on);
+                // dbg!(on);
 
                 if on {
                     // part2 += new.volume();
