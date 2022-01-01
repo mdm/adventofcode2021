@@ -1,7 +1,4 @@
-use std::{
-    collections::HashMap,
-    io::BufRead,
-};
+use std::{collections::HashMap, io::BufRead};
 
 use priority_queue::PriorityQueue;
 
@@ -208,8 +205,10 @@ fn find_lowest_energy_fast(
     let mut energy_used = HashMap::new();
     energy_used.insert(state.clone(), -0);
 
+    let mut iterations = 0;
     while let Some((current, energy_so_far)) = queue.pop() {
         if solved(&current, per_room) {
+            // dbg!(iterations);
             return Some(-energy_so_far);
         }
 
@@ -234,7 +233,7 @@ fn find_lowest_energy_fast(
                     energy_used.insert(next_state.clone(), next_energy);
                     let next_energy_estimated =
                         next_energy - estimate_energy(&next_state, per_room);
-                    queue.push_increase(next_state, next_energy_estimated);
+                    queue.push_increase(next_state, next_energy);
                 }
 
                 continue;
@@ -257,10 +256,12 @@ fn find_lowest_energy_fast(
                     energy_used.insert(next_state.clone(), next_energy);
                     let next_energy_estimated =
                         next_energy - estimate_energy(&next_state, per_room);
-                    queue.push_increase(next_state, next_energy_estimated);
+                    queue.push_increase(next_state, next_energy);
                 }
             }
         }
+
+        iterations += 1;
     }
 
     None
