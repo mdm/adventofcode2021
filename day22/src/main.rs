@@ -1,7 +1,4 @@
-use std::{
-    collections::{HashMap, HashSet},
-    io::BufRead,
-};
+use std::{collections::HashSet, io::BufRead};
 
 #[derive(Debug, Clone)]
 struct Cuboid {
@@ -202,7 +199,7 @@ fn main() {
         if on {
             next_on_cuboids.push(new);
         }
-      
+
         current_on_cuboids = next_on_cuboids;
         next_on_cuboids = Vec::new();
     }
