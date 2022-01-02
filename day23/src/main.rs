@@ -1,10 +1,8 @@
-use std::{
-    collections::{HashMap, VecDeque},
-    io::BufRead,
-};
+use std::{collections::HashMap, io::BufRead};
 
 use priority_queue::PriorityQueue;
 
+#[allow(dead_code)]
 fn print_map(map: &Vec<Vec<char>>, state: &Vec<(usize, usize)>, per_room: usize) {
     for (y, row) in map.iter().enumerate() {
         for (x, tile) in row.iter().enumerate() {
@@ -35,65 +33,6 @@ fn solved(state: &Vec<(usize, usize)>, per_room: usize) -> bool {
     }
 
     true
-}
-
-fn next_positions(
-    map: &Vec<Vec<char>>,
-    state: &Vec<(usize, usize)>,
-    amphipod_id: usize,
-    per_room: usize,
-) -> Vec<(usize, usize)> {
-    let target_x = amphipod_id / per_room * 2 + 3;
-
-    let target_clear = state
-        .iter()
-        .enumerate()
-        .filter(|(_, position)| position.0 == target_x && position.1 >= 2)
-        .all(|(occupant_id, _)| occupant_id / per_room * 2 + 3 == target_x);
-
-    if state[amphipod_id].0 == target_x && target_clear {
-        return vec![];
-    }
-
-    let mut positions = vec![state[amphipod_id]];
-    let mut queue = VecDeque::new();
-    queue.push_back(state[amphipod_id]);
-
-    while let Some(current) = queue.pop_front() {
-        for offset in vec![(0, -1), (1, 0), (0, 1), (-1, 0)] {
-            let next_position = (
-                (current.0 as i32 + offset.0) as usize,
-                (current.1 as i32 + offset.1) as usize,
-            );
-
-            if map[next_position.1][next_position.0] == '.'
-                && !state.contains(&next_position)
-                && !positions.contains(&next_position)
-            {
-                positions.push(next_position);
-                queue.push_back(next_position);
-            }
-        }
-    }
-
-    let (on_target, intermediate): (Vec<(usize, usize)>, Vec<(usize, usize)>) = positions
-        .iter()
-        .partition(|position| position.0 == target_x);
-
-    if target_clear && !on_target.is_empty() {
-        let target_position = on_target
-            .into_iter()
-            .max_by(|position_a, position_b| position_a.1.cmp(&position_b.1))
-            .expect("Expected on_target not ot be empty");
-        return vec![target_position];
-    }
-
-    intermediate
-        .into_iter()
-        .filter(|position| {
-            !vec![state[amphipod_id], (3, 1), (5, 1), (7, 1), (9, 1)].contains(position)
-        })
-        .collect()
 }
 
 fn estimate_energy(state: &Vec<(usize, usize)>, per_room: usize) -> i32 {
@@ -131,7 +70,7 @@ fn has_amphipods_above(state: &Vec<(usize, usize)>, reference: &(usize, usize)) 
     state
         .iter()
         .enumerate()
-        .filter(|(amphipod_id, position)| position.0 == reference.0 && position.1 < reference.1)
+        .filter(|(_amphipod_id, position)| position.0 == reference.0 && position.1 < reference.1)
         .peekable()
         .peek()
         .is_some()
@@ -163,22 +102,9 @@ fn blockers_for_room(state: &Vec<(usize, usize)>, room: usize, per_room: usize) 
         .iter()
         .enumerate()
         .filter(|(amphipod_id, position)| {
-            // dbg!(amphipod_id, position.0, target_x);
-            if position.0 == target_x {
-                let foreign = amphipod_id / per_room != room;
-                let below =
-                    has_amphipods_below(state, position, |below_id| below_id / per_room != room);
-                // dbg!(foreign, below);
-                amphipod_id / per_room != room
-                    || has_amphipods_below(state, position, |below_id| below_id / per_room != room)
-            } else {
-                let foreign = amphipod_id / per_room != room;
-                let below =
-                    has_amphipods_below(state, position, |below_id| below_id / per_room == room);
-                // dbg!(foreign, below);
-                amphipod_id / per_room != room
-                    && has_amphipods_below(state, position, |below_id| below_id / per_room == room)
-            }
+            position.0 == target_x
+                && (amphipod_id / per_room != room
+                    || has_amphipods_below(state, position, |below_id| below_id / per_room != room))
         })
         .map(|(amphipod_id, _position)| amphipod_id)
         .collect()
@@ -196,7 +122,9 @@ fn all_blockers(state: &Vec<(usize, usize)>, per_room: usize) -> Vec<usize> {
 fn can_move_into_room(state: &Vec<(usize, usize)>, amphipod_id: usize, per_room: usize) -> bool {
     let position = state[amphipod_id];
     let room = amphipod_id / per_room;
-    if !blockers_for_room(state, room, per_room).is_empty() {
+    if has_amphipods_above(state, &state[amphipod_id])
+        || !blockers_for_room(state, room, per_room).is_empty()
+    {
         return false;
     }
 
@@ -265,6 +193,7 @@ fn reachable_hallway_spots(state: &Vec<(usize, usize)>, amphipod_id: usize) -> V
         .collect()
 }
 
+#[allow(unused_variables)]
 fn find_lowest_energy_fast(
     map: &Vec<Vec<char>>,
     state: &Vec<(usize, usize)>,
@@ -276,14 +205,14 @@ fn find_lowest_energy_fast(
     let mut energy_used = HashMap::new();
     energy_used.insert(state.clone(), -0);
 
-    let mut iterations = 0usize;
+    let mut iterations = 0;
     while let Some((current, energy_so_far)) = queue.pop() {
         if solved(&current, per_room) {
-            dbg!(iterations);
-            print_map(map, &current, per_room);
-            dbg!(energy_used[&current]);
+            // dbg!(iterations);
             return Some(-energy_so_far);
         }
+
+        let blockers = all_blockers(&current, per_room);
 
         for (amphipod_id, position) in current.iter().enumerate() {
             let target_x = amphipod_id / per_room * 2 + 3;
@@ -296,9 +225,6 @@ fn find_lowest_energy_fast(
             }
 
             if can_move_into_room(&current, amphipod_id, per_room) {
-                // dbg!(iterations, amphipod_id, position, target_x);
-                // print_map(map, &current, per_room);
-
                 let (next_state, energy_for_move) = move_into_room(&current, amphipod_id, per_room);
                 let next_energy = energy_used[&current] - energy_for_move;
 
@@ -307,19 +233,18 @@ fn find_lowest_energy_fast(
                     energy_used.insert(next_state.clone(), next_energy);
                     let next_energy_estimated =
                         next_energy - estimate_energy(&next_state, per_room);
-                    queue.push_increase(next_state, next_energy_estimated);
+                    queue.push_increase(next_state, next_energy);
                 }
 
                 continue;
             }
 
-            let blockers = all_blockers(&current, per_room);
             if !blockers.contains(&amphipod_id) {
                 continue;
             }
 
-            let candidates = reachable_hallway_spots(&current, amphipod_id);
-            for next_position in candidates {
+            let hallway_spots = reachable_hallway_spots(&current, amphipod_id);
+            for next_position in hallway_spots {
                 let next_energy = energy_used[&current]
                     - 10i32.pow(amphipod_id as u32 / per_room as u32)
                         * distance(*position, next_position);
@@ -331,96 +256,15 @@ fn find_lowest_energy_fast(
                     energy_used.insert(next_state.clone(), next_energy);
                     let next_energy_estimated =
                         next_energy - estimate_energy(&next_state, per_room);
-                    queue.push_increase(next_state, next_energy_estimated);
+                    queue.push_increase(next_state, next_energy);
                 }
             }
         }
 
         iterations += 1;
-
-        if iterations % 50_000 == 0 {
-            dbg!(iterations);
-            print_map(map, &current, per_room);
-            dbg!(energy_so_far);
-        }
     }
-
-    dbg!(iterations);
 
     None
-}
-
-fn find_lowest_energy_slow(
-    map: &Vec<Vec<char>>,
-    state: &Vec<(usize, usize)>,
-    per_room: usize,
-) -> i32 {
-    let mut queue = PriorityQueue::new();
-    queue.push(state.clone(), -0);
-
-    let mut energy_used = HashMap::new();
-    energy_used.insert(state.clone(), -0);
-
-    let mut iterations = 0usize;
-    while let Some((current, energy_so_far)) = queue.pop() {
-        if solved(&current, per_room) {
-            dbg!(iterations);
-            print_map(map, &current, per_room);
-            dbg!(energy_used[&current]);
-            return -energy_so_far;
-        }
-
-        for (amphipod_id, position) in current.iter().enumerate() {
-            for next_position in next_positions(map, &current, amphipod_id, per_room) {
-                if !(position.1 >= 2) && !(next_position.1 >= 2) {
-                    continue; // stay put of in hallway and next_position is also in hallway
-                }
-
-                if position.0 != next_position.0 && next_position.1 >= 2 {
-                    let target_x = amphipod_id / per_room * 2 + 3;
-                    if next_position.0 != target_x {
-                        continue; // not target room
-                    }
-
-                    let free = current
-                        .iter()
-                        .enumerate()
-                        .filter(|(_, position)| position.0 == next_position.0 && position.1 >= 2)
-                        .all(|(occupant_id, _)| occupant_id / per_room == amphipod_id / per_room);
-
-                    if !free {
-                        continue; // room is occupied by other amphipod type
-                    }
-                }
-
-                let next_energy = energy_used[&current]
-                    - 10i32.pow(amphipod_id as u32 / per_room as u32)
-                        * distance(*position, next_position);
-                let mut next_state = current.clone();
-                next_state[amphipod_id] = next_position;
-
-                if !energy_used.contains_key(&next_state) || energy_used[&next_state] <= next_energy
-                {
-                    energy_used.insert(next_state.clone(), next_energy);
-                    let next_energy_estimated =
-                        next_energy - estimate_energy(&next_state, per_room);
-                    queue.push_increase(next_state, next_energy_estimated);
-                }
-            }
-        }
-
-        iterations += 1;
-
-        if iterations % 500_000 == 0 {
-            dbg!(iterations);
-            print_map(map, &current, per_room);
-            dbg!(energy_so_far);
-        }
-    }
-
-    dbg!(iterations);
-
-    -1 // no solution
 }
 
 fn main() {
@@ -454,8 +298,6 @@ fn main() {
         .map(|(_, coordinates)| coordinates)
         .collect::<Vec<_>>();
 
-    print_map(&map1, &state, 2);
-
     let part1 = find_lowest_energy_fast(&map1, &state, 2).unwrap();
     println!("{}", part1);
 
@@ -483,16 +325,11 @@ fn main() {
         .collect::<Vec<_>>();
 
     positions.sort();
-    let mut state = positions
+    let state = positions
         .into_iter()
         .map(|(_, coordinates)| coordinates)
         .collect::<Vec<_>>();
 
-    print_map(&map2, &state, 4);
-
-    let tmp = find_lowest_energy_fast(&map2, &state, 4);
-    dbg!(tmp);
-
-    // let part2 = find_lowest_energy_fast(&map2, &state, 4);
-    // println!("{}", part2);
+    let part2 = find_lowest_energy_fast(&map2, &state, 4).unwrap();
+    println!("{}", part2);
 }
