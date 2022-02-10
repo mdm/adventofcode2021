@@ -1,4 +1,5 @@
-use std::{io::BufRead};
+use std::io::BufRead;
+use std::collections::HashSet;
 
 #[derive(Debug, Clone)]
 enum Operand {
@@ -42,7 +43,12 @@ impl Instruction {
     }
 }
 
-fn execute(program: &Vec<Instruction>, input: i64, mut registers: Vec<i64>, mut ip: usize) -> (Vec<i64>, usize) {
+fn execute(
+    program: &Vec<Instruction>,
+    input: i64,
+    mut registers: Vec<i64>,
+    mut ip: usize,
+) -> (Vec<i64>, usize) {
     loop {
         match &program[ip] {
             Instruction::Inp(dest) => {
@@ -72,7 +78,7 @@ fn execute(program: &Vec<Instruction>, input: i64, mut registers: Vec<i64>, mut 
                     Operand::Register(src) => registers[*src],
                     Operand::Constant(value) => *value,
                 };
-                dbg!(registers[dest], src);
+                // dbg!(registers[dest], src);
                 registers[dest] = registers[dest] * src;
             }
             Instruction::Div(dest, src) => {
@@ -111,7 +117,11 @@ fn execute(program: &Vec<Instruction>, input: i64, mut registers: Vec<i64>, mut 
         }
 
         ip += 1;
-        dbg!(ip);
+        // dbg!(ip);
+
+        if ip == program.len() {
+            break;
+        }
 
         if let Instruction::Inp(_) = program[ip] {
             break;
@@ -119,6 +129,44 @@ fn execute(program: &Vec<Instruction>, input: i64, mut registers: Vec<i64>, mut 
     }
 
     (registers, ip)
+}
+
+fn find_model_number(snippets: &Vec<Vec<Instruction>>, depth: usize, register_z: i64, memo: &mut HashSet<(usize, i64)>, reverse: bool) -> Option<Vec<i64>> {
+    if depth == 14 {
+        if register_z == 0 {
+            return Some(Vec::new());
+        } else {
+            return None;
+        }
+    }
+
+    if memo.contains(&(depth, register_z)) {
+        return None;
+    }
+
+    let mut digits = (1..=9).collect::<Vec<_>>();
+    if reverse {
+        digits.reverse();
+    }
+
+    for digit in digits {
+        let registers = vec![0, 0, 0, register_z];
+        let (new_registers, _ip) = execute(&snippets[depth], digit, registers, 0);
+
+        let model_number = find_model_number(snippets, depth + 1, new_registers[3], memo, reverse);
+
+        match model_number {
+            Some(mut model_number) => {
+                model_number.push(digit);
+                return Some(model_number);
+            }
+            None => {
+                memo.insert((depth + 1, new_registers[3]));
+            }
+        }
+    }
+
+    None
 }
 
 fn main() {
@@ -130,20 +178,27 @@ fn main() {
         .lines()
         .map(|line| Instruction::from_string(&line.unwrap()))
         .collect::<Vec<_>>();
-        
-    let mut outputs1 = Vec::new();
-    let mut outputs2 = Vec::new();
-    for input1 in 1..=9 {
-        let mut start = 0;
-        let (registers, ip) = execute(&program, input1, vec![0i64; 4], start);
-        outputs1.push(registers.clone());
-        start = ip;
 
-        for input2 in 1..=9 {
-            let (registers, ip) = execute(&program, input2, outputs1[input1 as usize - 1].clone(), start);
-            outputs2.push(registers.clone());
-        }        
+    let mut snippets = Vec::new();
+    let mut snippet = Vec::new();
+    for instruction in program {
+        if let Instruction::Inp(_) = instruction {
+            if !snippet.is_empty() {
+                snippets.push(snippet);
+                snippet = Vec::new();
+            }
+        }
+
+        snippet.push(instruction);
     }
+    snippets.push(snippet);
 
-    dbg!(&outputs1, outputs2);
+
+    let model_number = find_model_number(&snippets, 0, 0, &mut HashSet::new(), true).unwrap();
+    let part1 = model_number.iter().rev().fold(0i64, |number, digit| number * 10 + digit);
+    println!("{}", part1);
+
+    let model_number = find_model_number(&snippets, 0, 0, &mut HashSet::new(), false).unwrap();
+    let part2 = model_number.iter().rev().fold(0i64, |number, digit| number * 10 + digit);
+    println!("{}", part2);
 }
